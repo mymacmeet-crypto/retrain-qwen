@@ -1,0 +1,58 @@
+# =============================================================================
+# Accelerate configuration for QLoRA fine-tuning
+#
+# This file is used when launching training with:
+#   accelerate launch --config_file finetune/training/accelerate_config.yaml \
+#       finetune/training/train.py
+#
+# WHY ACCELERATE?
+#   HuggingFace Accelerate is an abstraction layer over PyTorch DDP
+#   (Distributed Data Parallel) and DeepSpeed.  It lets you write single-GPU
+#   training code and then scale to multi-GPU or multi-node without changing
+#   your training script.
+#
+# SINGLE GPU (most common for local fine-tuning)
+# =============================================================================
+
+compute_environment: LOCAL_MACHINE
+
+# ── Distributed training ──────────────────────────────────────────────────────
+distributed_type: NO            # NO = single process; MULTI_GPU = DDP; DEEPSPEED = ZeRO
+num_processes: 1                # number of GPU processes
+
+# ── Mixed precision ───────────────────────────────────────────────────────────
+# bf16 is preferred over fp16 on Ampere (RTX 3000/4000, A100) and newer.
+# fp16 on older GPUs (Volta, Turing).
+mixed_precision: bf16
+
+# ── Machine info ─────────────────────────────────────────────────────────────
+machine_rank: 0                 # rank of this machine (0 for single machine)
+main_process_ip: null
+main_process_port: null
+main_training_function: main    # function to call in your training script
+
+# ── Dynamo/torch.compile (optional) ──────────────────────────────────────────
+# Uncomment to enable torch.compile for potential speedup (PyTorch 2.0+).
+# Can reduce throughput on small models; test before enabling in production.
+# dynamo_backend: INDUCTOR
+
+# =============================================================================
+# MULTI-GPU CONFIGURATION (uncomment to use 2+ GPUs)
+# =============================================================================
+# distributed_type: MULTI_GPU
+# num_processes: 2              # match number of GPUs
+# mixed_precision: bf16
+# gradient_accumulation_steps: 8   # reduce since effective batch = 2 × per_device × accum
+
+# =============================================================================
+# DEEPSPEED ZeRO-2 (for 4+ GPUs or very large models)
+# Partitions optimiser states across GPUs to reduce per-GPU memory.
+# =============================================================================
+# distributed_type: DEEPSPEED
+# deepspeed_config:
+#   gradient_accumulation_steps: 4
+#   gradient_clipping: 0.3
+#   offload_optimizer_device: none   # 'cpu' to offload to RAM (slower, less VRAM)
+#   offload_param_device: none       # 'cpu' to offload params (very slow, max VRAM savings)
+#   zero_stage: 2
+#   zero3_init_flag: false

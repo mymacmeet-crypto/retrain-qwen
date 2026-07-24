@@ -1,0 +1,58 @@
+ollama:
+  base_url: "http://localhost:11434"
+  embedding_model: "nomic-embed-text"   # pull with: ollama pull nomic-embed-text
+  # After fine-tuning, change this to: "qwen2.5-salesforce"
+  llm_model: "qwen2.5:7b"
+  timeout: 180
+  embedding_batch_size: 8               # reduce if OOM; increase for speed
+
+documents:
+  dataset_path: "/Users/test/Downloads/OmniStudio.Salesforce.Help.Articles"
+  supported_extensions:
+    - ".html"
+    - ".htm"
+    - ".md"
+    - ".txt"
+    - ".pdf"
+    - ".docx"
+    - ".json"
+    - ".cls"       # Apex
+    - ".trigger"   # Apex Trigger
+    - ".js"
+    - ".ts"
+    - ".jsx"
+    - ".tsx"
+    - ".xml"
+    - ".soql"
+    - ".sosl"
+    - ".yaml"
+    - ".yml"
+    - ".csv"
+    - ".apex"
+
+chunking:
+  chunk_size: 600       # target tokens per chunk (approx 4 chars/token)
+  chunk_overlap: 100    # overlap tokens between consecutive chunks
+  min_chunk_size: 50    # discard chunks smaller than this
+
+vector_store:
+  persist_directory: "./data/chroma_db"
+  collection_name: "salesforce_knowledge"
+
+retrieval:
+  top_k: 5             # number of chunks to retrieve
+
+rag:
+  max_context_tokens: 6000
+  temperature: 0.1
+  system_prompt: |
+    You are a Salesforce OmniStudio expert assistant. Answer questions based ONLY on the
+    documentation excerpts provided in the CONTEXT section below.
+
+    Rules you must follow:
+    1. Use ONLY the provided context to answer. Do not use any external knowledge.
+    2. If the answer cannot be found in the context, respond exactly with:
+       "I cannot find this information in the available OmniStudio documentation."
+    3. At the end of every answer, include a "Sources:" line listing the document filenames used.
+    4. Be concise and accurate. Use numbered steps for procedures and bullet points for lists.
+    5. Quote or paraphrase from the context rather than inventing details.

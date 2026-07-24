@@ -1,0 +1,75 @@
+# =============================================================================
+# Ollama Modelfile for Qwen2.5-7B fine-tuned on Salesforce OmniStudio data
+#
+# This file tells Ollama how to build and configure your fine-tuned model.
+# It is analogous to a Dockerfile — it references your GGUF file, sets
+# generation parameters, and embeds a default system prompt.
+#
+# Build with:
+#   ollama create qwen2.5-salesforce -f finetune/ollama/Modelfile
+#
+# Run with:
+#   ollama run qwen2.5-salesforce
+# =============================================================================
+
+# ── Base GGUF file ────────────────────────────────────────────────────────────
+# Path to your converted GGUF.  This must be an ABSOLUTE path or relative
+# to the directory where you run `ollama create`.
+# Update Q4_K_M to match the quantisation you chose in convert_gguf.sh.
+FROM ../gguf/qwen2.5-salesforce-Q4_K_M.gguf
+
+# ── Chat template ─────────────────────────────────────────────────────────────
+# Qwen2.5 uses the ChatML template.  Ollama reads this to correctly wrap
+# each turn with <|im_start|> and <|im_end|> tokens.
+# If llama.cpp embedded the template in the GGUF you can omit this block —
+# Ollama will pick it up automatically.
+TEMPLATE """{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ range .Messages }}{{ if eq .Role "user" }}<|im_start|>user
+{{ .Content }}<|im_end|>
+<|im_start|>assistant
+{{ else if eq .Role "assistant" }}{{ .Content }}<|im_end|>
+{{ end }}{{ end }}"""
+
+# ── System prompt ─────────────────────────────────────────────────────────────
+# This is the default system prompt used when no system message is provided
+# by the calling application.  Your FastAPI server's RAG pipeline will
+# override this with a context-rich prompt at query time, so this acts as a
+# sensible standalone fallback.
+SYSTEM """You are an expert Salesforce OmniStudio assistant with deep knowledge of:
+- OmniStudio components (FlexCards, OmniScripts, DataRaptors, Integration Procedures)
+- Salesforce Lightning Web Components (LWC)
+- Apex, SOQL, and Salesforce platform APIs
+- Salesforce automation (Flow, Process Builder)
+- Salesforce security model (profiles, permission sets, sharing rules)
+
+Answer questions accurately and concisely. Use numbered steps for procedures,
+bullet points for lists, and include relevant code snippets where helpful.
+If you are unsure, say so rather than guessing."""
+
+# ── Generation parameters ─────────────────────────────────────────────────────
+
+# Temperature: randomness of output.
+# 0.1 → very focused, deterministic (good for factual Q&A)
+# 0.7 → creative, more varied (good for brainstorming)
+PARAMETER temperature 0.1
+
+# Top-p nucleus sampling: only sample from the top P probability mass.
+# 0.9 with low temperature gives precise answers without being robotic.
+PARAMETER top_p 0.9
+
+# Top-k: restrict sampling to the k most likely next tokens.
+PARAMETER top_k 40
+
+# Repetition penalty: penalise tokens that have already appeared.
+# 1.1 lightly discourages repeating the same phrase twice.
+PARAMETER repeat_penalty 1.1
+
+# Context window in tokens.
+# Must match or exceed max_seq_length used during training (2048).
+# Increase to 4096 or 8192 if your queries + retrieved context are long.
+PARAMETER num_ctx 4096
+
+# Stop sequences: tokens that signal end of response.
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|endoftext|>"

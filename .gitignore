@@ -1,0 +1,46 @@
+# ── ChromaDB / RAG data ───────────────────────────────────────────────────────
+data/chroma_db/
+data/ingestion_state.json
+
+# ── Fine-tuning: generated files (too large for git) ─────────────────────────
+finetune/mlx_model/           # MLX 4-bit model (~4 GB)
+finetune/merged_model/        # Merged fp16 model (~14 GB)
+finetune/gguf/                # GGUF files (~4-14 GB)
+finetune/adapters/            # Trained LoRA adapter weights
+finetune/dataset/processed/   # Generated JSONL datasets
+
+# ── Fine-tuning: auto-generated config (built at runtime by train.py) ────────
+finetune/training/lora_config.yaml
+finetune/training/training_summary.json
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+.venv/
+venv/
+env/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Logs / checkpoints ────────────────────────────────────────────────────────
+*.log
+runs/
+wandb/

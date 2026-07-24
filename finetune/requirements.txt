@@ -1,0 +1,28 @@
+# ── Core training stack ──────────────────────────────────────────────────────
+torch>=2.3.0                    # CUDA-capable PyTorch
+transformers>=4.44.0            # HuggingFace Transformers (Qwen2.5 support)
+peft>=0.12.0                    # Parameter-Efficient Fine-Tuning (LoRA/QLoRA)
+trl>=0.10.0                     # SFTTrainer, reward modelling utilities
+bitsandbytes>=0.43.0            # 4-bit / 8-bit quantization (BNB)
+accelerate>=0.33.0              # Multi-GPU / mixed-precision orchestration
+datasets>=2.21.0                # HuggingFace dataset utilities
+
+# ── Optimisation helpers ─────────────────────────────────────────────────────
+scipy>=1.13.0                   # Required by some BNB operations
+einops>=0.8.0                   # Tensor manipulation (used by Qwen2.5 attention)
+flash-attn>=2.6.3               # FlashAttention-2 (optional but strongly recommended)
+                                # Install separately: pip install flash-attn --no-build-isolation
+
+# ── Experiment tracking ──────────────────────────────────────────────────────
+tensorboard>=2.17.0             # Local training curves
+# wandb>=0.17.0                 # Uncomment if you prefer Weights & Biases
+
+# ── Evaluation ───────────────────────────────────────────────────────────────
+rouge-score>=0.1.2
+nltk>=3.9.1
+numpy>=1.26.0
+pandas>=2.2.0
+
+# ── Utilities ────────────────────────────────────────────────────────────────
+tqdm>=4.66.0
+pyyaml>=6.0

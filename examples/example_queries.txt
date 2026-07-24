@@ -1,0 +1,33 @@
+# Example queries for the Salesforce OmniStudio RAG system
+# Run: python query.py "<question>"
+
+# --- OmniScript ---
+How do I add a step to an OmniScript?
+What is the difference between a Step and a Block in OmniScript?
+How do I activate and launch an OmniScript?
+How can I add validation to a custom Lightning Web Component in OmniScript?
+What are the supported element types in the OmniScript designer?
+
+# --- FlexCard ---
+What is a FlexCard and what are its main components?
+How do I add a chart to a FlexCard?
+How do I activate and publish a FlexCard?
+How can I add a FlexCard LWC to OmniOut?
+What actions can I add to a FlexCard?
+
+# --- DataRaptor ---
+How does DataRaptor Transform work?
+What is the difference between DataRaptor Extract and DataRaptor Load?
+How do I map fields in a DataRaptor?
+
+# --- Integration Procedure ---
+How do I create an Integration Procedure?
+How can I access Integration Procedure data JSON with merge fields?
+What HTTP methods does Integration Procedure support?
+
+# --- OmniStudio General ---
+What is the OmniStudio Design Assistant?
+How do I access custom labels in an OmniScript custom Lightning Web Component?
+How do I add Google Tag Manager data to an OmniScript?
+What is OmniOut and how is it different from standard OmniStudio?
+How do I configure Omni Interaction for DocuSign?
