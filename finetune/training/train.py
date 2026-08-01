@@ -100,9 +100,15 @@ def convert_to_mlx(base_model: str, mlx_path: Path, quantize: bool, q_bits: int)
     mlx_lm convert downloads the model from HuggingFace on first run and
     caches it in ~/.cache/huggingface.  Subsequent runs are instant.
     """
-    if mlx_path.exists() and any(mlx_path.iterdir()):
+    if (mlx_path / "config.json").exists():
         print(f"MLX model already exists at {mlx_path} — skipping conversion.")
         return mlx_path
+
+    # mlx_lm convert refuses to write into an existing directory.
+    # Remove it if it exists but is incomplete (no config.json).
+    if mlx_path.exists():
+        import shutil
+        shutil.rmtree(mlx_path)
 
     print(f"\n[Step 1/4] Converting {base_model} → MLX format …")
     print(f"  Output : {mlx_path}")

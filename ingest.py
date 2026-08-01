@@ -55,13 +55,30 @@ def file_changed(path: Path, state: dict) -> bool:
     return stat.st_mtime != entry.get("mtime") or stat.st_size != entry.get("size")
 
 
+def content_hash(path: Path) -> str:
+    """MD5 of the raw file bytes — identical content produces identical hash
+    regardless of filename or location."""
+    h = hashlib.md5()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
 # ---------------------------------------------------------------------------
-# Chunk ID generation (deterministic, stable across reruns)
+# Chunk ID generation — based on CONTENT hash, not file path
+#
+# Why content hash instead of file path?
+#   If a file is renamed or moved, its path changes but its content hash
+#   stays the same.  Using the content hash as the chunk ID means:
+#     - Renamed files produce the same IDs → ChromaDB upsert is a no-op
+#     - Truly new files get new IDs → indexed normally
+#     - Duplicate files (same content, different name) share IDs → only
+#       stored once, no wasted embeddings or context window space
 # ---------------------------------------------------------------------------
 
-def chunk_id(source: str, chunk_index: int) -> str:
-    h = hashlib.md5(source.encode()).hexdigest()[:12]
-    return f"{h}_{chunk_index:04d}"
+def chunk_id(content_hash_hex: str, chunk_index: int) -> str:
+    return f"{content_hash_hex[:12]}_{chunk_index:04d}"
 
 
 # ---------------------------------------------------------------------------
@@ -171,23 +188,45 @@ def main():
     for path in tqdm(to_index, desc="Indexing files", unit="file"):
         src_key = str(path.resolve())
 
-        # Remove stale chunks for this file before reinserting
+        # Compute content hash before loading — used for chunk IDs and
+        # duplicate detection.  Two files with the same hash are identical.
+        c_hash = content_hash(path)
+
+        # Check if another file with the same content is already indexed.
+        # If so, record this path in state (so we don't re-check it next run)
+        # but skip re-embedding — the chunks already exist under the same IDs.
+        already_indexed_via_hash = any(
+            v.get("content_hash") == c_hash and k != src_key
+            for k, v in state.items()
+            if isinstance(v, dict)
+        )
+        if already_indexed_via_hash:
+            tqdm.write(f"  [SKIP] {path.name} — duplicate content, already indexed under a different filename")
+            stat = path.stat()
+            state[src_key] = {
+                "mtime": stat.st_mtime,
+                "size": stat.st_size,
+                "content_hash": c_hash,
+                "chunks": 0,
+                "skip": "duplicate_content",
+            }
+            continue
+
+        # Remove stale chunks for this file path before reinserting
         if src_key in state:
             store.delete_by_source(src_key)
 
         doc = load_document(path)
         if doc is None:
             errors += 1
-            # Mark as seen so we don't retry an unreadable file every run
             stat = path.stat()
-            state[src_key] = {"mtime": stat.st_mtime, "size": stat.st_size, "chunks": 0, "skip": "unreadable"}
+            state[src_key] = {"mtime": stat.st_mtime, "size": stat.st_size, "content_hash": c_hash, "chunks": 0, "skip": "unreadable"}
             continue
 
         chunks = splitter.split(doc)
         if not chunks:
-            # File loaded but produced no indexable content (e.g. JS-rendered shell)
             stat = path.stat()
-            state[src_key] = {"mtime": stat.st_mtime, "size": stat.st_size, "chunks": 0, "skip": "no_content"}
+            state[src_key] = {"mtime": stat.st_mtime, "size": stat.st_size, "content_hash": c_hash, "chunks": 0, "skip": "no_content"}
             continue
 
         # Embed in mini-batches
@@ -199,7 +238,8 @@ def main():
             errors += 1
             continue
 
-        ids = [chunk_id(doc.source, c.chunk_index) for c in chunks]
+        # IDs are derived from content hash — rename-proof and dedup-proof
+        ids = [chunk_id(c_hash, c.chunk_index) for c in chunks]
         metadatas = [
             {
                 "source": c.source,
@@ -219,6 +259,7 @@ def main():
         state[src_key] = {
             "mtime": stat.st_mtime,
             "size": stat.st_size,
+            "content_hash": c_hash,
             "chunks": len(chunks),
         }
         total_chunks += len(chunks)
@@ -234,14 +275,16 @@ def main():
 
 
 def _print_stats(store: VectorStore, state: dict) -> None:
-    indexed = {k: v for k, v in state.items() if isinstance(v, dict) and v.get("chunks", 0) > 0}
-    skipped = {k: v for k, v in state.items() if isinstance(v, dict) and v.get("chunks", 0) == 0}
-    total_ch = sum(v.get("chunks", 0) for v in indexed.values())
+    indexed    = {k: v for k, v in state.items() if isinstance(v, dict) and v.get("chunks", 0) > 0}
+    duplicates = {k: v for k, v in state.items() if isinstance(v, dict) and v.get("skip") == "duplicate_content"}
+    skipped    = {k: v for k, v in state.items() if isinstance(v, dict) and v.get("chunks", 0) == 0 and v.get("skip") != "duplicate_content"}
+    total_ch   = sum(v.get("chunks", 0) for v in indexed.values())
     print(f"\n--- Collection stats ---")
     print(f"  Total chunks in DB   : {store.count()}")
     print(f"  Files indexed        : {len(indexed)}")
     print(f"  Total chunks         : {total_ch}")
-    print(f"  Files skipped        : {len(skipped)}  (JS-rendered shells / empty)")
+    print(f"  Duplicate files      : {len(duplicates)}  (same content, different filename — skipped)")
+    print(f"  Files skipped        : {len(skipped)}  (JS-rendered shells / empty / unreadable)")
     print()
 
 

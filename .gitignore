@@ -3,11 +3,16 @@ data/chroma_db/
 data/ingestion_state.json
 
 # ── Fine-tuning: generated files (too large for git) ─────────────────────────
-finetune/mlx_model/           # MLX 4-bit model (~4 GB)
-finetune/merged_model/        # Merged fp16 model (~14 GB)
-finetune/gguf/                # GGUF files (~4-14 GB)
-finetune/adapters/            # Trained LoRA adapter weights
-finetune/dataset/processed/   # Generated JSONL datasets
+# MLX 4-bit model (~4 GB)
+finetune/mlx_model/
+# Merged fp16 model (~14 GB)
+finetune/merged_model/
+# GGUF files (~4-14 GB)
+finetune/gguf/
+# Trained LoRA adapter weights
+finetune/adapters/
+# Generated JSONL datasets
+finetune/dataset/processed/
 
 # ── Fine-tuning: auto-generated config (built at runtime by train.py) ────────
 finetune/training/lora_config.yaml
@@ -44,3 +49,6 @@ env/
 *.log
 runs/
 wandb/
+
+# ── Scratch files ─────────────────────────────────────────────────────────────
+test.txt

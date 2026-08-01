@@ -168,7 +168,7 @@ echo ""
 echo "The fp16 GGUF ($(du -sh "${FP16_GGUF}" | cut -f1)) is only needed for quantisation."
 read -rp "Delete it now to reclaim disk space? [Y/n] " resp
 resp="${resp:-Y}"
-if [[ "${resp,,}" == "y" ]]; then
+if [ "${resp}" = "Y" ] || [ "${resp}" = "y" ] || [ "${resp}" = "yes" ]; then
     rm -f "${FP16_GGUF}"
     green "Deleted ${FP16_GGUF}"
 fi

@@ -2,7 +2,7 @@ ollama:
   base_url: "http://localhost:11434"
   embedding_model: "nomic-embed-text"   # pull with: ollama pull nomic-embed-text
   # After fine-tuning, change this to: "qwen2.5-salesforce"
-  llm_model: "qwen2.5:7b"
+  llm_model: "qwen2.5-salesforce"
   timeout: 180
   embedding_batch_size: 8               # reduce if OOM; increase for speed
 

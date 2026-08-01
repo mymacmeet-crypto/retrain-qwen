@@ -38,6 +38,7 @@ Output: finetune/dataset/processed/train.jsonl
         finetune/dataset/processed/generation_progress.json
 """
 
+import hashlib
 import json
 import random
 import re
@@ -234,7 +235,7 @@ def generate_from_chromadb(
         sys.exit("ChromaDB is empty — run ingest.py first.")
 
     # Load all chunk texts (ChromaDB returns them in stable insertion order)
-    raw   = store._collection.get(include=["documents", "metadatas"])
+    raw   = store._col.get(include=["documents", "metadatas"])
     docs  = raw["documents"] or []
     metas = raw["metadatas"] or []
 
@@ -274,11 +275,23 @@ def generate_from_chromadb(
 
     examples: list[dict] = []
     skipped = 0
+    duplicate_chunks = 0
+    seen_hashes: set[str] = set()   # content hashes seen in this run
 
     for chunk_text, meta in tqdm(zip(docs, metas), total=actual_limit, desc="Generating"):
         if len(chunk_text.strip()) < 100:
             skipped += 1
             continue
+
+        # Detect duplicate chunk content — same text under a different filename
+        chunk_hash = hashlib.md5(chunk_text.strip().encode()).hexdigest()
+        if chunk_hash in seen_hashes:
+            source_name = Path(meta.get("source", "unknown")).name
+            tqdm.write(f"  [SKIP] {source_name} — duplicate chunk content, skipping Q&A generation")
+            duplicate_chunks += 1
+            skipped += 1
+            continue
+        seen_hashes.add(chunk_hash)
 
         prompt = QA_GENERATION_PROMPT.format(
             chunk=chunk_text[:3000],
@@ -300,7 +313,8 @@ def generate_from_chromadb(
         for pair in pairs:
             examples.append(_to_training_example(pair["question"], pair["answer"]))
 
-    print(f"\nGenerated {len(examples):,} examples ({skipped} chunks skipped).")
+    print(f"\nGenerated {len(examples):,} examples ({skipped} chunks skipped, "
+          f"{duplicate_chunks} duplicate chunks blocked).")
 
     if not examples:
         print("No examples generated — nothing written.")
